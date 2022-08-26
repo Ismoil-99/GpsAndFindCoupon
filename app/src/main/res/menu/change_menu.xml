@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/search_mylocation"
+        android:title="Найти по GPS"
+        app:showAsAction="never"
+        />
+    <item
+        android:id="@+id/search_change_location"
+        android:title="Найти по выбору местоположение"
+        app:showAsAction="never"
+        />
+</menu>
