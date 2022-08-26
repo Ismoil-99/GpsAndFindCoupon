@@ -2,17 +2,26 @@ package com.app.mapsexample
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Dialog
+import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -23,12 +32,16 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.SphericalUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarkerDragListener{
     private lateinit var mMap: GoogleMap
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: ActivityMapsBinding
     private var markersCoupon:MutableList<Marker> = mutableListOf()
+    private lateinit var customDialog: Dialog
     private lateinit var fusedLocationProviderClient:FusedLocationProviderClient
     private var myLocation:LatLng = LatLng(0.0,0.0)
     private var listCoupon:MutableList<Coupon> = mutableListOf()
@@ -44,6 +57,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         listCoupon = viewModel.showCoupon().toMutableList()
+        customDialog = LoadingDialog(this)
     }
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.change_menu,menu)
@@ -53,16 +67,30 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when(item.itemId){
             R.id.search_mylocation ->{
-                mMap.clear()
-                mMap.isMyLocationEnabled = true
-                binding.search.visibility = View.GONE
-                showCoupon(myLocation)
+                lifecycleScope.launch(Dispatchers.Main) {
+                    customDialog.show()
+                    mMap.clear()
+                    mMap.isMyLocationEnabled = true
+                    binding.search.visibility = View.GONE
+                    showCoupon(myLocation)
+                    delay(2000)
+                    customDialog.dismiss()
+                }
             }
             R.id.search_change_location -> {
-                mMap.isMyLocationEnabled = false
-                mMap.clear()
-                binding.search.visibility = View.VISIBLE
-                mMap.addMarker(MarkerOptions().position(myLocation).title("Вы здесь").draggable(true))
+                lifecycleScope.launch{
+                    customDialog.show()
+                    mMap.isMyLocationEnabled = false
+                    mMap.clear()
+                    binding.search.visibility = View.VISIBLE
+                    mMap.addMarker(
+                        MarkerOptions().position(myLocation).title("Вы здесь").draggable(true)
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.navigation))
+                    )
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation,14f))
+                    delay(2000)
+                    customDialog.dismiss()
+                }
             }
         }
         return true
@@ -76,11 +104,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
             isZoomControlsEnabled = true
         }
         binding.search.setOnClickListener {
-            showCoupon(locationChange)
+            lifecycleScope.launch {
+                customDialog.show()
+                showCoupon(locationChange)
+                delay(1000)
+                customDialog.dismiss()
+            }
+
         }
         val positionDushanbe:CameraPosition = CameraPosition.Builder()
-            .target(LatLng(38.5765, 68.7786))
-            .zoom(15f)
+            .target(LatLng(38.5513, 68.7671))
+            .zoom(12f)
             .bearing(0f)
             .tilt(45f)
             .build()
@@ -89,11 +123,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     }
     private fun showCoupon(location: LatLng) {
         for (i in listCoupon){
-            val pos = LatLng(i.latitube,i.longitube)
-            val example = LatLng(i.latitube, i.longitube)
-            val distance = SphericalUtil.computeDistanceBetween(location,example)
+            val position = LatLng(i.latitube,i.longitube)
+            val distance = SphericalUtil.computeDistanceBetween(location,position)
             if (distance.toInt()/1000 < 3){
-                markersCoupon.add(mMap.addMarker(MarkerOptions().position(pos).title(i.coupon))!!)
+                markersCoupon.add(
+                    mMap.addMarker(
+                        MarkerOptions().position(position).title(i.coupon).icon(
+                        getBitmapDescriptorFromVector(this,R.drawable.ic_coupon_svgrepo_com)
+                        )
+                    )!!
+                )
             }
         }
     }
@@ -114,7 +153,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     @SuppressLint("MissingPermission")
     private fun checkLocationPermission(){
         if (ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            //mMap.isMyLocationEnabled = true
+            mMap.isMyLocationEnabled = true
             Toast.makeText(this,"Already Enabled",Toast.LENGTH_SHORT).show()
         }else{
             requestPermission()
@@ -154,5 +193,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
             mark.remove()
         }
         markersCoupon.clear()
+    }
+    private fun getBitmapDescriptorFromVector(context: Context, @DrawableRes vectorDrawableResourceId: Int): BitmapDescriptor? {
+        val vectorDrawable = ContextCompat.getDrawable(context, vectorDrawableResourceId)
+        val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth, vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+        vectorDrawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 }
