@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">MapsExample</string>
     <string name="title_activity_maps">MapsActivity</string>
+    <string name="header">Инфо о Купоне</string>
+    <string name="description">Название Купона</string>
+    <string name="distance">Растояние</string>
+    <string name="coupon_info">50 сомони на первый заказ в приложении!</string>
 </resources>

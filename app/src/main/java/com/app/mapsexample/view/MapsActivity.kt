@@ -1,15 +1,12 @@
-package com.app.mapsexample
+package com.app.mapsexample.view
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -22,6 +19,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.app.mapsexample.DESCCOUPON
+import com.app.mapsexample.DISTANCE
+import com.app.mapsexample.model.Coupon
+import com.app.mapsexample.viewmodel.MainViewModel
+import com.app.mapsexample.R
 
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -36,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarkerDragListener{
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarkerDragListener,GoogleMap.OnMarkerClickListener{
     private lateinit var mMap: GoogleMap
     private lateinit var viewModel: MainViewModel
     private lateinit var binding: ActivityMapsBinding
@@ -73,6 +75,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
                     mMap.isMyLocationEnabled = true
                     binding.search.visibility = View.GONE
                     showCoupon(myLocation)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation,14f))
                     delay(2000)
                     customDialog.dismiss()
                 }
@@ -120,16 +123,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
             .build()
         mMap.moveCamera(CameraUpdateFactory.newCameraPosition(positionDushanbe))
         mMap.setOnMarkerDragListener(this)
+        mMap.setOnMarkerClickListener(this)
     }
     private fun showCoupon(location: LatLng) {
         for (i in listCoupon){
             val position = LatLng(i.latitube,i.longitube)
             val distance = SphericalUtil.computeDistanceBetween(location,position)
-            if (distance.toInt()/1000 < 3){
+            if (distance/1000 < 3){
                 markersCoupon.add(
                     mMap.addMarker(
                         MarkerOptions().position(position).title(i.coupon).icon(
-                        getBitmapDescriptorFromVector(this,R.drawable.ic_coupon_svgrepo_com)
+                        getBitmapDescriptorFromVector(this, R.drawable.ic_coupon_svgrepo_com)
                         )
                     )!!
                 )
@@ -201,5 +205,33 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
         vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
         vectorDrawable.draw(canvas)
         return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
+    override fun onMarkerClick(p0: Marker): Boolean {
+        val distance:Double = SphericalUtil.computeDistanceBetween(myLocation,p0.position)
+        val distanceChange:Double = SphericalUtil.computeDistanceBetween(locationChange,p0.position)
+        showInfoCoupon(distance,distanceChange,p0.title)
+        return true
+    }
+
+    private fun showInfoCoupon(distance: Double, distanceChange: Double, titleCoupon: String?) {
+        var getDistance = 0.0
+        var getTitle:String? = null
+        if (distance / 1000 < 3){
+            getDistance = distance
+            getTitle = titleCoupon
+        }else if(distanceChange/1000 < 3){
+            getDistance = distanceChange
+            getTitle = titleCoupon
+        }
+        val bundle = Bundle()
+        val bottomSheet = BottomSheetShowCoupon()
+        bundle.putDouble(DISTANCE,getDistance)
+        bundle.putString(DESCCOUPON,getTitle)
+        bottomSheet.arguments = bundle
+        bottomSheet.show(
+            this.supportFragmentManager,
+            bottomSheet.tag
+        )
     }
 }

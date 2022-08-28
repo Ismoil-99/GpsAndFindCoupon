@@ -1,4 +1,4 @@
-package com.app.mapsexample
+package com.app.mapsexample.model
 
 data class Coupon(
     val id:Int,

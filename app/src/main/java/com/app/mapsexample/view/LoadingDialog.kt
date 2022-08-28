@@ -1,4 +1,4 @@
-package com.app.mapsexample
+package com.app.mapsexample.view
 
 import android.app.Dialog
 import android.content.Context
@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.Window
+import com.app.mapsexample.R
 
 class LoadingDialog(context:Context) : Dialog(context) {
 
