@@ -48,6 +48,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     private var myLocation:LatLng = LatLng(0.0,0.0)
     private var listCoupon:MutableList<Coupon> = mutableListOf()
     private var locationChange:LatLng = LatLng(0.0,0.0)
+    private var countMarker:Int = 0
+    private var distanceLocation:LatLng = LatLng(0.0,0.0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +77,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
                     mMap.isMyLocationEnabled = true
                     binding.search.visibility = View.GONE
                     showCoupon(myLocation)
+                    distanceLocation = myLocation
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation,14f))
                     delay(2000)
                     customDialog.dismiss()
@@ -111,6 +114,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
                 customDialog.show()
                 showCoupon(locationChange)
                 delay(1000)
+                distanceLocation = locationChange
                 customDialog.dismiss()
             }
 
@@ -129,14 +133,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
         for (i in listCoupon){
             val position = LatLng(i.latitube,i.longitube)
             val distance = SphericalUtil.computeDistanceBetween(location,position)
-            if (distance/1000 < 3){
-                markersCoupon.add(
-                    mMap.addMarker(
-                        MarkerOptions().position(position).title(i.coupon).icon(
-                        getBitmapDescriptorFromVector(this, R.drawable.ic_coupon_svgrepo_com)
-                        )
-                    )!!
+            if (distance.toFloat()/1000 < 3.0000){
+                markersCoupon.add(countMarker,
+                    mMap.addMarker(MarkerOptions().position(position).title(i.coupon).icon(getBitmapDescriptorFromVector(this,R.drawable.ic_coupon_svgrepo_com)))!!
                 )
+                countMarker++
             }
         }
     }
@@ -181,7 +182,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
             return
         }
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-            Toast.makeText(this,"Granted!",Toast.LENGTH_SHORT).show()
             mMap.isMyLocationEnabled = true
         }else{
             Toast.makeText(this,"Granted!",Toast.LENGTH_SHORT).show()
@@ -190,13 +190,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     override fun onMarkerDrag(p0: Marker) {
     }
     override fun onMarkerDragEnd(p0: Marker) {
+        locationChange = LatLng(p0.position.latitude,p0.position.longitude)
     }
     override fun onMarkerDragStart(p0: Marker) {
-        locationChange = LatLng(p0.position.latitude,p0.position.longitude)
         for (mark in markersCoupon){
             mark.remove()
         }
         markersCoupon.clear()
+        countMarker = 0
     }
     private fun getBitmapDescriptorFromVector(context: Context, @DrawableRes vectorDrawableResourceId: Int): BitmapDescriptor? {
         val vectorDrawable = ContextCompat.getDrawable(context, vectorDrawableResourceId)
@@ -208,25 +209,21 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     }
 
     override fun onMarkerClick(p0: Marker): Boolean {
-        val distance:Double = SphericalUtil.computeDistanceBetween(myLocation,p0.position)
-        val distanceChange:Double = SphericalUtil.computeDistanceBetween(locationChange,p0.position)
-        showInfoCoupon(distance,distanceChange,p0.title)
+        val distance:Double = SphericalUtil.computeDistanceBetween(distanceLocation,p0.position)
+        showInfoCoupon(distance,p0.title)
         return true
     }
 
-    private fun showInfoCoupon(distance: Double, distanceChange: Double, titleCoupon: String?) {
-        var getDistance = 0.0
+    private fun showInfoCoupon(distance: Double, titleCoupon: String?) {
+        var getDistance = 0000.00f
         var getTitle:String? = null
-        if (distance / 1000 < 3){
-            getDistance = distance
-            getTitle = titleCoupon
-        }else if(distanceChange/1000 < 3){
-            getDistance = distanceChange
+        if (distance/ 1000 < 3){
+            getDistance = distance.toFloat()
             getTitle = titleCoupon
         }
         val bundle = Bundle()
         val bottomSheet = BottomSheetShowCoupon()
-        bundle.putDouble(DISTANCE,getDistance)
+        bundle.putFloat(DISTANCE,getDistance)
         bundle.putString(DESCCOUPON,getTitle)
         bottomSheet.arguments = bundle
         bottomSheet.show(

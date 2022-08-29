@@ -38,9 +38,9 @@ class BottomSheetShowCoupon : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val getDistance = requireArguments().getDouble(DISTANCE)
+        val getDistance = requireArguments().getFloat(DISTANCE)
         val getTitle = requireArguments().getString(DESCCOUPON)
         binding.nameCoupon.text = getTitle
-        binding.nameDistance.text = "${getDistance.toInt()} км"
+        binding.nameDistance.text = "${getDistance.toLong()} м"
     }
 }
