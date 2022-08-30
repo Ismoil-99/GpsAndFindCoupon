@@ -56,10 +56,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
         binding = ActivityMapsBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         listCoupon = viewModel.showCoupon().toMutableList()
         customDialog = LoadingDialog(this)
     }
@@ -145,12 +145,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     private fun getDeviceLocation() {
         try {
             val locationResult = fusedLocationProviderClient.lastLocation
-            locationResult.addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val radius = task.result
-                    myLocation = LatLng(radius.latitude,radius.longitude)
+            locationResult.addOnSuccessListener {
+                if (it != null){
+                    myLocation = LatLng(it.latitude,it.longitude)
                 }
             }
+
         } catch (e: SecurityException) {
             Log.e("Exception: %s", e.message, e)
         }
@@ -159,7 +159,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
     private fun checkLocationPermission(){
         if (ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             mMap.isMyLocationEnabled = true
-            Toast.makeText(this,"Already Enabled",Toast.LENGTH_SHORT).show()
         }else{
             requestPermission()
         }
@@ -183,8 +182,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,GoogleMap.OnMarker
         }
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
             mMap.isMyLocationEnabled = true
+            getDeviceLocation()
         }else{
-            Toast.makeText(this,"Granted!",Toast.LENGTH_SHORT).show()
+            Toast.makeText(this,"Включите доступь к местоположение!",Toast.LENGTH_SHORT).show()
         }
     }
     override fun onMarkerDrag(p0: Marker) {
